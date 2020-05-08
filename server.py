@@ -6,7 +6,7 @@ from asyncio import transports
 
 welcome_message = 'Приветствую тебя мой друг из другой вселенной \nПредставься мне, Великому Разуму \nВведи login:ТвойЛогинТут'
 login_already_exists_message = 'Логин {} занят, попробуйте другой'
-qnt_last_messages = -11
+qnt_last_messages = 10
 
 
 class ClientProtocol(asyncio.Protocol):
@@ -20,7 +20,7 @@ class ClientProtocol(asyncio.Protocol):
 
     def send_history(self):
         if len(self.server.history) > 0:
-            last_messages = self.server.history[:qnt_last_messages:-1]
+            last_messages = self.server.history[-qnt_last_messages:]
             last_messages.reverse()
             last_tem_messages = ('То что ты пропустил\n' + '\n'.join(last_messages)).encode()
             self.transport.write(last_tem_messages)
@@ -42,18 +42,21 @@ class ClientProtocol(asyncio.Protocol):
                     self.transport.write(
                         f"Привет, {self.login}!".encode()
                     )
+                    self.send_message(f'К нам присоединился {self.login}', system=True)
                     self.send_history()
             else:
                 self.transport.write(welcome_message.encode())
-
         else:
             self.server.history.append(f"<{self.login}> {decoded}")
             self.send_message(decoded)
 
-    def send_message(self, message):
-        format_string = f"<{self.login}> {message}"
-        encoded = format_string.encode()
+    def send_message(self, message, system=False):
+        if system:
+            format_string = f"<<< {message} >>>"
+        else:
+            format_string = f"<{self.login}> {message}"
 
+        encoded = format_string.encode()
         for client in self.server.clients:
             if client.login != self.login:
                 client.transport.write(encoded)
